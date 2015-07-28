@@ -1,67 +1,123 @@
 import json
 
 from .primitive import LoopPrimitive
-from pypot.utils.interpolation import KDTreeDict
 
+try:
+    
+    from pypot.utils.interpolation import KDTreeDict
 
-class Move(object):
+    class Move(object):
 
-    """ Simple class used to represent a movement.
+        """ Simple class used to represent a movement.
 
-    This class simply wraps a sequence of positions of specified motors. The sequence must be recorded at a predefined frequency. This move can be recorded through the :class:`~pypot.primitive.move.MoveRecorder` class and played thanks to a :class:`~pypot.primitive.move.MovePlayer`.
+        This class simply wraps a sequence of positions of specified motors. The sequence must be recorded at a predefined frequency. This move can be recorded through the :class:`~pypot.primitive.move.MoveRecorder` class and played thanks to a :class:`~pypot.primitive.move.MovePlayer`.
 
-    """
-
-    def __init__(self, freq):
-        self._framerate = freq
-        self._timed_positions = KDTreeDict()
-
-    def __repr__(self):
-        return '<Move framerate={} #keyframes={}>'.format(self.framerate,
-                                                          len(self.positions()))
-
-    def __getitem__(self, i):
-        return list(self._timed_positions.items())[i]
-
-    @property
-    def framerate(self):
-        return self._framerate
-
-    def add_position(self, pos, time):
-        """ Add a new position to the movement sequence.
-
-        Each position is typically stored as a dict of (time, (motor_name,motor_position)).
         """
-        self._timed_positions[time] = pos
 
-    def iterpositions(self):
-        """ Returns an iterator on the stored positions. """
-        return self._timed_positions.items()
-        # return iter(self._timed_positions.items())
+        def __init__(self, freq):
+            self._framerate = freq
+            self._timed_positions = KDTreeDict()
 
-    def positions(self):
-        """ Returns a copy of the stored positions. """
-        return self._timed_positions
-        # return list(self.iterpositions())
+        def __repr__(self):
+            return '<Move framerate={} #keyframes={}>'.format(self.framerate,
+                                                              len(self.positions()))
 
-    def save(self, file):
-        """ Saves the :class:`~pypot.primitive.move.Move` to a json file.
+        def __getitem__(self, i):
+            return list(self._timed_positions.items())[i]
 
-        .. note:: The format used to store the :class:`~pypot.primitive.move.Move` is extremely verbose and should be obviously optimized for long moves.
+        @property
+        def framerate(self):
+            return self._framerate
+
+        def add_position(self, pos, time):
+            """ Add a new position to the movement sequence.
+
+            Each position is typically stored as a dict of (time, (motor_name,motor_position)).
+            """
+            self._timed_positions[time] = pos
+
+        def iterpositions(self):
+            """ Returns an iterator on the stored positions. """
+            return self._timed_positions.items()
+            # return iter(self._timed_positions.items())
+
+        def positions(self):
+            """ Returns a copy of the stored positions. """
+            return self._timed_positions
+            # return list(self.iterpositions())
+
+        def save(self, file):
+            """ Saves the :class:`~pypot.primitive.move.Move` to a json file.
+
+            .. note:: The format used to store the :class:`~pypot.primitive.move.Move` is extremely verbose and should be obviously optimized for long moves.
+            """
+            d = {
+                'framerate': self.framerate,
+                'positions': self._timed_positions,
+            }
+            json.dump(d, file, indent=2)
+
+        @classmethod
+        def load(cls, file):
+            """ Loads a :class:`~pypot.primitive.move.Move` from a json file. """
+            d = json.load(file)
+            move = cls(d['framerate'])
+            move._timed_positions.update(d['positions'])
+            return move
+except:
+    class Move(object):
+
+        """ Simple class used to represent a movement.
+        This class simply wraps a sequence of positions of specified motors. The sequence must be recorded at a predefined frequency. This move can be recorded through the :class:`~pypot.primitive.move.MoveRecorder` class and played thanks to a :class:`~pypot.primitive.move.MovePlayer`.
         """
-        d = {
-            'framerate': self.framerate,
-            'positions': self._timed_positions,
-        }
-        json.dump(d, file, indent=2)
 
-    @classmethod
-    def load(cls, file):
-        """ Loads a :class:`~pypot.primitive.move.Move` from a json file. """
-        d = json.load(file)
-        move = cls(d['framerate'])
-        move._timed_positions.update(d['positions'])
-        return move
+        def __init__(self, freq):
+            self._framerate = freq
+            self._positions = []
+
+        def __repr__(self):
+            return '<Move framerate={} #keyframes={}>'.format(self.framerate,
+                                                              len(self.positions()))
+
+        def __getitem__(self, i):
+            return self._positions[i]
+
+        @property
+        def framerate(self):
+            return self._framerate
+
+        def add_position(self, pos, time=None):
+            """ Add a new position to the movement sequence.
+            Each position is typically stored as a dict of (motor_name, motor_position).
+            """
+            self._positions.append(pos)
+
+        def iterpositions(self):
+            """ Returns an iterator on the stored positions. """
+            return iter(self._positions)
+
+        def positions(self):
+            """ Returns a copy of the stored positions. """
+            return list(self.iterpositions())
+
+        def save(self, file):
+            """ Saves the :class:`~pypot.primitive.move.Move` to a json file.
+            .. note:: The format used to store the :class:`~pypot.primitive.move.Move` is extremely verbose and should be obviously optimized for long moves.
+            """
+            d = {
+                'framerate': self.framerate,
+                'positions': self.positions(),
+            }
+            json.dump(d, file, indent=2)
+
+        @classmethod
+        def load(cls, file):
+            """ Loads a :class:`~pypot.primitive.move.Move` from a json file. """
+            d = json.load(file)
+
+            move = cls(d['framerate'])
+            move._positions = d['positions']
+            return move
 
 
 class MoveRecorder(LoopPrimitive):
